@@ -1,5 +1,5 @@
-# Demo GIF capture plan
+# Demo capture
 
-Record a 20–40 second screen capture of the actual deployed app: dataset summary, select logistic regression, adjust C, train, show metrics, then select random forest, train, and show comparison rows. Convert the recording to a modest-size `docs/demo.gif`, verify it plays on GitHub, and replace README's placeholder note with `![ModelSphere demo](docs/demo.gif)`.
+`demo.gif` is a short animation assembled from screenshots of the running public Streamlit app. It shows the model selector, configuration, evaluation metrics, and saved experiment comparison table. It was captured after successfully training logistic regression and random forest on the live app on October 19, 2026.
 
-Do not create an animation that implies features not in the app.
+The live app is at https://efpmqnyhgu7aepxpdqxxi2.streamlit.app/ .

@@ -1,77 +1,93 @@
-# ModelSphere
+# Project Title: ModelSphere
 
-**Team:** Texas Toast  
-**Project:** A small, reproducible machine learning experimentation dashboard  
-**Live demo:** Pending deployment  
-**Demo recording:** Pending capture; see [demo plan](docs/demo.md)
+ModelSphere is a compact machine learning experiment dashboard. It trains two classification models on the Breast Cancer Wisconsin dataset, evaluates them on a held-out test set, and saves results for side-by-side comparison. Built by team **Texas Toast** with Streamlit, scikit-learn, and SQLite.
 
-## Overview
+## 👥 Team Members & Contributions
 
-ModelSphere lets a user train a classification model on the built-in Breast Cancer Wisconsin (Diagnostic) dataset, inspect holdout metrics, save a run, and compare past runs. It uses Streamlit, scikit-learn, and SQLite. The dataset is loaded from scikit-learn; no dataset download is needed.
+All three students must make substantive commits from their own accounts. The roles below are the active task split; GitHub history will show completed individual contributions before submission.
 
-## Run locally
+* **Oluwasegun Soji-John ([@Oluwasegun-rm](https://github.com/Oluwasegun-rm))** — dashboard, integration, demo, deployment ([issue #1](https://github.com/Oluwasegun-rm/modelsphere/issues/1))
+* **[@WaunCPU](https://github.com/WaunCPU)** — training engine, validation, and optional tuning ([issue #2](https://github.com/Oluwasegun-rm/modelsphere/issues/2))
+* **[@Eicap1-prog](https://github.com/eicap1-prog)** — experiment tracking and optional drift signal ([issue #3](https://github.com/Oluwasegun-rm/modelsphere/issues/3))
 
-Python 3.11 or 3.12 is recommended.
+The initial scaffold was created with Codex; it is not represented as a student's individual work. Teammate invitations are pending acceptance, after which issues #2 and #3 can be formally assigned.
+
+---
+
+## 🚀 Live Demo
+
+* **Application URL:** [ModelSphere on Streamlit Community Cloud](https://efpmqnyhgu7aepxpdqxxi2.streamlit.app/)
+
+The public app was opened and both classifiers were trained successfully on October 19, 2026. Local SQLite history on Community Cloud may reset after an app restart.
+
+### 🎥 Project Walkthrough
+
+![Project Demo Walkthrough](docs/demo.gif)
+
+The GIF shows actual frames from the live app: model selection, configuration, and saved results.
+
+---
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+
+Python 3.11 or 3.12, `pip`, and Git.
+
+### Local Installation
 
 ```bash
+git clone https://github.com/Oluwasegun-rm/modelsphere.git
+cd modelsphere
 python -m venv .venv
-source .venv/bin/activate
-make install
-make run
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m pip install -r requirements.txt
+streamlit run app.py
 ```
 
-Open the local address shown by Streamlit. To run tests: `make test`.
+Run automated checks with `python -m pytest -q` and the non-UI smoke check with `python -m scripts.smoke_test`.
 
-## How to use
+---
 
-1. Choose logistic regression or random forest in the sidebar.
-2. Set the test fraction and random seed, then configure the model.
-3. Select **Train and save** to see accuracy, precision, recall, F1, and ROC AUC.
-4. Compare rows in the saved experiments table.
+## 📊 Dataset
 
-The app uses a stratified train/test split. Logistic regression scales features inside a pipeline fitted on the training set only. The test set is held out from fitting. Results are educational and are not medical advice.
-Precision, recall, F1, and ROC AUC treat **benign (class 1)** as the positive class.
+* **Source:** [UCI Breast Cancer Wisconsin (Diagnostic)](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic), accessed through [scikit-learn's bundled loader](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_breast_cancer.html).
+* **Description:** 569 observations, 30 numeric features derived from breast mass images, and a binary malignant/benign label. In scikit-learn, class 0 is malignant and class 1 is benign.
+* **Data pipeline:** `load_breast_cancer()` supplies the data with the package. The app makes a stratified 80/20 split by default; the random seed and test fraction are configurable. No data file needs to be downloaded separately.
 
-## Current scope and limitations
+This is an educational dataset and app, not a clinical diagnostic tool.
 
-| Feature | Status |
-| --- | --- |
-| Built-in Wisconsin dataset | Implemented |
-| Two classification algorithms and configurable parameters | Implemented |
-| Holdout evaluation with five metrics | Implemented |
-| SQLite saved run comparison | Implemented |
-| CSV upload and target selection | Planned |
-| Optuna hyperparameter tuning | Planned |
-| Drift monitoring | Planned |
-| AI insights | Planned |
+---
 
-SQLite history is stored at `.local/modelsphere.db` by default. On cloud hosting with ephemeral storage, saved runs may disappear after a restart. This demo has no user accounts and should not be used for sensitive data.
+## 🧠 Model Architecture & Training
 
-## Project structure
+* **Algorithms:** Logistic regression with configurable regularization strength C; random forest with configurable tree count and maximum depth.
+* **Frameworks:** scikit-learn for data, training, and evaluation; Streamlit for the interface; SQLite for experiment records.
+* **Training process:** A stratified train/test split keeps the holdout data out of fitting. Logistic regression uses `StandardScaler` inside a training-only pipeline. Random forest uses a fixed random seed. The app saves settings and metrics, not model binaries or row-level data.
 
-- `app.py`: Streamlit interface
-- `src/training.py`: dataset, model training, metrics
-- `src/tracking.py`: SQLite persistence
-- `tests/`: automated checks
-- `docs/`: architecture, deployment, demo plan, team work
-- `scripts/`: helper scripts
+Hyperparameter tuning with Optuna, drift monitoring, CSV upload, and AI insights are proposed extensions. They are not implemented in the current release.
 
-## Team contributions
+---
 
-Work is split in [team tasks](docs/team_tasks.md). Each teammate should create a branch, make genuine commits for their own work, and open a pull request. GitHub history is the record of contributions; this README will be updated with each member's actual commits before submission.
+## 📈 Evaluation & Results
 
-Task issues: [integration and deployment](https://github.com/Oluwasegun-rm/modelsphere/issues/1), [training engine](https://github.com/Oluwasegun-rm/modelsphere/issues/2), and [tracking and monitoring](https://github.com/Oluwasegun-rm/modelsphere/issues/3). GitHub will allow formal assignment of the teammate issues after their pending collaborator invitations are accepted.
+The following values were observed in the live demo with an 80/20 stratified split and seed 42 (455 training, 114 test rows). Test metrics use **benign (class 1)** as the positive class. Training metrics are intentionally not reported as generalization results.
 
-## Deployment
+| Model | Test accuracy | Test precision | Test recall | Test F1 | Test ROC AUC |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| Logistic regression (C=1.0) | 0.982 | 0.986 | 0.986 | 0.986 | 0.995 |
+| Random forest (100 trees, unlimited depth) | 0.956 | 0.959 | 0.972 | 0.966 | 0.994 |
 
-See [deployment guide](docs/deployment.md). Add the verified public demo URL here after deployment.
+These are results from one fixed split of a small, easy dataset; they do not establish clinical suitability. The dashboard reports all five metrics for each new run and displays saved runs in a comparison table.
 
-## Academic submission checklist
+---
 
-- [ ] All three members have genuine commits
-- [ ] Record `demo.gif`, embed it here, and verify it plays on GitHub
-- [ ] Publish and verify a functional public demo URL
-- [ ] Invite Dr. Dacon (`daconjam`) as collaborator
-- [ ] Update implemented feature status and contribution links
+## 🧑‍💻 Git Workflow & Guidelines
 
-<!-- Once recorded, embed with: ![ModelSphere demo](docs/demo.gif) -->
+1. Create a feature branch for your issue, such as `feature/training-validation`.
+2. Pull the latest `main` before starting and before opening a pull request.
+3. Make genuine, descriptive commits from your own account; open a pull request early.
+4. Run `python -m pytest -q` and keep `streamlit run app.py` working.
+5. Merge working core improvements before optional features. Keep this README accurate about what is live.
+
+The detailed task split is in [team tasks](docs/team_tasks.md), and agent development rules are in [AGENTS.md](AGENTS.md). GitHub Actions runs the tests on pushes and pull requests.
