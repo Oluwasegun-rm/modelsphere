@@ -4,13 +4,13 @@ ModelSphere is a compact machine learning experiment dashboard. It trains two cl
 
 ## 👥 Team Members & Contributions
 
-All three students must make substantive commits from their own accounts. The roles below are the active task split; GitHub history will show completed individual contributions before submission.
+All three students have contributed commits to the repository. Their completed work and current areas of ownership are:
 
-* **Oluwasegun Soji-John ([@Oluwasegun-rm](https://github.com/Oluwasegun-rm))** — dashboard, integration, demo, deployment ([issue #1](https://github.com/Oluwasegun-rm/modelsphere/issues/1))
-* **[@WaunCPU](https://github.com/WaunCPU)** — training engine, validation, and optional tuning ([issue #2](https://github.com/Oluwasegun-rm/modelsphere/issues/2))
-* **[@Eicap1-prog](https://github.com/eicap1-prog)** — experiment tracking and optional drift signal ([issue #3](https://github.com/Oluwasegun-rm/modelsphere/issues/3))
+* **Oluwasegun Soji-John ([@Oluwasegun-rm](https://github.com/Oluwasegun-rm))** — dashboard comparison, integration, demo, deployment, and Docker packaging ([issue #1](https://github.com/Oluwasegun-rm/modelsphere/issues/1))
+* **Dawaun Shields ([@WaunCPU](https://github.com/WaunCPU))** — training validation, repeatable runs, and held-out evaluation tests ([issue #2](https://github.com/Oluwasegun-rm/modelsphere/issues/2))
+* **Eian Capers ([@Eicap1-prog](https://github.com/eicap1-prog))** — reliable SQLite experiment saving, simultaneous-save handling, and tracking tests ([issue #3](https://github.com/Oluwasegun-rm/modelsphere/issues/3))
 
-The initial scaffold was created with Codex; it is not represented as a student's individual work. GitHub issue assignment requires each teammate to accept the collaborator invitation; check the issue assignees before submission.
+The initial scaffold was created with Codex; it is not represented as a student's individual work. GitHub history shows each student's later contributions.
 
 ---
 
@@ -49,6 +49,7 @@ Run automated checks with `python -m pytest -q` and the non-UI smoke check with 
 
 For a guided first run and a fair model comparison, follow the [local walkthrough](docs/local_walkthrough.md).
 For CSV limits, validation, and saved-run behavior, see the [upload guide](docs/upload.md).
+To build and run the same app in Docker, follow the [container guide](docs/container.md). The Docker image is checked in GitHub Actions; the public demo runs on Streamlit Community Cloud.
 
 ---
 
@@ -70,7 +71,7 @@ This is an educational dataset and app, not a clinical diagnostic tool.
 * **Frameworks:** scikit-learn for data, training, and evaluation; Streamlit for the interface; SQLite for experiment records.
 * **Training process:** A stratified train/test split keeps the holdout data out of fitting. Logistic regression uses `StandardScaler` inside a training-only pipeline. Random forest uses a fixed random seed. The app saves settings and metrics, not model binaries or row-level data.
 
-Hyperparameter tuning with Optuna, drift monitoring, CSV upload, and AI insights are proposed extensions. They are not implemented in the current release.
+Hyperparameter tuning with Optuna, drift monitoring, a PyTorch/Lightning classifier, and AI insights are planned next steps. They are not implemented in this release. The CSV workflow becomes available in the public app after this change is merged and deployed.
 
 ---
 
@@ -95,7 +96,7 @@ These are results from one fixed split of a small, easy dataset; they do not est
 4. Run `python -m pytest -q` and keep `streamlit run app.py` working.
 5. Merge working core improvements before optional features. Keep this README accurate about what is live.
 
-The detailed task split is in [team tasks](docs/team_tasks.md), and agent development rules are in [AGENTS.md](AGENTS.md). GitHub Actions runs the tests on pushes and pull requests.
+The [implementation plan](docs/implementation_plan.md) maps the course brief to current and next work. The detailed task split is in [team tasks](docs/team_tasks.md), and agent development rules are in [AGENTS.md](AGENTS.md). GitHub Actions runs the tests and container checks on pushes and pull requests.
 
 ## 🎓 Understand and present the project
 
