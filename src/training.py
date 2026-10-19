@@ -86,6 +86,17 @@ def _validate_settings(model: str, test_size: Any, random_state: Any, c: Any,
             raise ValueError(f"max_depth must be None or a whole number of at least 1, got {max_depth!r}")
 
 
+def load_features_and_target(dataset: DatasetSpec | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """Return (feature table, 0/1 labels) for the built-in data or an uploaded dataset.
+
+    Shared by training and tuning so both always start from the same rows.
+    """
+    if dataset is None:
+        data = load_breast_cancer()
+        return data.data, data.target
+    return dataset.features.to_numpy(dtype=float), dataset.target
+
+
 def split_indices(target: np.ndarray, test_size: float, random_state: int) -> tuple[np.ndarray, np.ndarray]:
     """Return (train_rows, test_rows): a seeded, stratified split of row numbers.
 
@@ -137,11 +148,7 @@ def train_model(model: str, *, test_size: float = 0.2, random_state: int = 42,
     n_estimators = int(n_estimators)
     max_depth = None if max_depth is None else int(max_depth)
 
-    if dataset is None:
-        data = load_breast_cancer()
-        features, target = data.data, data.target
-    else:
-        features, target = dataset.features.to_numpy(dtype=float), dataset.target
+    features, target = load_features_and_target(dataset)
     train_rows, test_rows = split_indices(target, test_size, random_state)
     x_train, y_train = features[train_rows], target[train_rows]
     x_test, y_test = features[test_rows], target[test_rows]
