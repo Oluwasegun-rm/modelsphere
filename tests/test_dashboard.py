@@ -1,12 +1,15 @@
 """Check the dashboard's train, save, and comparison flow."""
 
+from pathlib import Path
+
 from streamlit.testing.v1 import AppTest
 
 
 def test_dashboard_records_comparable_runs(tmp_path, monkeypatch):
     monkeypatch.setenv("MODELSPHERE_DB_PATH", str(tmp_path / "experiments.db"))
 
-    app = AppTest.from_file("app.py").run()
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(app_path).run()
     assert not app.exception
 
     app.button[0].click().run()
