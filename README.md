@@ -1,14 +1,14 @@
 # Project Title: ModelSphere
 
-ModelSphere is a compact machine learning experiment dashboard. It trains two classification models on the built-in Breast Cancer Wisconsin dataset or a small uploaded numeric CSV with a two-class target, evaluates them on a held-out test set, and saves results for side-by-side comparison. Built by team **Texas Toast** with Streamlit, scikit-learn, and SQLite.
+ModelSphere is a compact machine learning experiment dashboard. It trains two classification models on the built-in Breast Cancer Wisconsin dataset or a small uploaded numeric CSV with a two-class target, evaluates them on a held-out test set, and saves results for side-by-side comparison. Users can optionally tune settings with Optuna and compare a new batch's numeric features with the training data. Built by team **Texas Toast** with Streamlit, scikit-learn, and SQLite.
 
 ## 👥 Team Members & Contributions
 
 All three students have contributed commits to the repository. Their completed work and current areas of ownership are:
 
 * **Oluwasegun Soji-John ([@Oluwasegun-rm](https://github.com/Oluwasegun-rm))** — dashboard comparison, integration, demo, deployment, and Docker packaging ([issue #1](https://github.com/Oluwasegun-rm/modelsphere/issues/1))
-* **Dawaun Shields ([@WaunCPU](https://github.com/WaunCPU))** — training validation, repeatable runs, and held-out evaluation tests ([issue #2](https://github.com/Oluwasegun-rm/modelsphere/issues/2))
-* **Eian Capers ([@Eicap1-prog](https://github.com/eicap1-prog))** — reliable SQLite experiment saving, simultaneous-save handling, and tracking tests ([issue #3](https://github.com/Oluwasegun-rm/modelsphere/issues/3))
+* **Dawaun Shields ([@WaunCPU](https://github.com/WaunCPU))** — training validation, repeatable evaluation, and bounded Optuna tuning ([issue #2](https://github.com/Oluwasegun-rm/modelsphere/issues/2))
+* **Eian Capers ([@Eicap1-prog](https://github.com/eicap1-prog))** — SQLite experiment saving and numeric data-drift checks ([issue #3](https://github.com/Oluwasegun-rm/modelsphere/issues/3))
 
 The initial scaffold was created with Codex; it is not represented as a student's individual work. GitHub history shows each student's later contributions.
 
@@ -68,10 +68,10 @@ This is an educational dataset and app, not a clinical diagnostic tool.
 ## 🧠 Model Architecture & Training
 
 * **Algorithms:** Logistic regression with configurable regularization strength C; random forest with configurable tree count and maximum depth.
-* **Frameworks:** scikit-learn for data, training, and evaluation; Streamlit for the interface; SQLite for experiment records.
-* **Training process:** A stratified train/test split keeps the holdout data out of fitting. Logistic regression uses `StandardScaler` inside a training-only pipeline. Random forest uses a fixed random seed. The app saves settings and metrics, not model binaries or row-level data.
+* **Frameworks:** scikit-learn for data, training, and evaluation; Optuna for optional hyperparameter search; Streamlit for the interface; SQLite for experiment records.
+* **Training process:** A stratified train/test split keeps the holdout data out of fitting. Logistic regression uses `StandardScaler` inside a training-only pipeline. Random forest uses a fixed random seed. Optional Optuna tuning tries at most 20 settings in the dashboard, using cross-validation on training rows only; the chosen model is then scored once on the held-out test rows. The app saves settings and metrics, not model binaries or row-level data.
 
-Hyperparameter tuning with Optuna, drift monitoring, a PyTorch/Lightning classifier, and AI insights are planned next steps. They are not implemented in this release. The CSV workflow becomes available in the public app after this change is merged and deployed.
+The **Check data drift** section compares training features with a new batch, either an uploaded CSV or a clearly labelled built-in example. It reports a per-feature distribution gap and a plain-language status. This is an input-data warning, not a prediction of future drift or a measurement of model accuracy. At least 30 usable values per feature are needed in each batch. The check does not send alerts or save monitoring history. A PyTorch/Lightning classifier, LLM insights, predictive alerts, and dynamic container scaling are not implemented in this release.
 
 ---
 

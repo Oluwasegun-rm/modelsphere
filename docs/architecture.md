@@ -9,10 +9,11 @@ Streamlit controls (app.py)
     | built-in data OR inspected CSV (src/datasets.py)
     | model, settings, test fraction, seed
     v
-train_model (src/training.py)
+train_model (src/training.py) OR tune_model (src/tuning.py)
     | load bundled Wisconsin dataset or accept DatasetSpec
     | stratified train/test split
     | fit preprocessing and model on training rows only
+    | tune on training folds only when requested
     | predict on untouched test rows
     v
 Result: settings, test metrics, row counts, optional dataset metadata
@@ -26,7 +27,7 @@ Streamlit metric cards      SQLite file (src/tracking.py)
                           comparison table (app.py)
 ```
 
-The UI coordinates the workflow. `src/datasets.py` validates uploads and returns a `DatasetSpec` with numeric features, binary labels, and metadata. Training does not know about Streamlit or SQLite; tracking accepts a small `Result` rather than a model or dataset. Uploaded rows are not written to SQLite.
+The UI coordinates the workflow. `src/datasets.py` validates uploads and returns a `DatasetSpec` with numeric features, binary labels, and metadata. Training and tuning do not know about Streamlit or SQLite; tracking accepts a small `Result` rather than a model or dataset. Uploaded rows are not written to SQLite. Separately, `src/monitoring.py` compares the training features with a new batch and returns a drift report without saving rows.
 
 ## File-by-file roles
 
@@ -35,6 +36,8 @@ The UI coordinates the workflow. `src/datasets.py` validates uploads and returns
 | `app.py` | Collects settings, starts a run, and displays metrics and saved runs. |
 | `src/datasets.py` | Reads and validates a small CSV; provides a `DatasetSpec` and fingerprint. |
 | `src/training.py` | Loads data, splits it, chooses an algorithm, fits it, and calculates test metrics. Defines `Result`. |
+| `src/tuning.py` | Uses bounded Optuna cross-validation on training rows and returns the usual `Result`. |
+| `src/monitoring.py` | Compares numeric feature distributions in reference and new batches. |
 | `src/tracking.py` | Creates a SQLite table if needed, inserts run summaries, and lists them newest first. |
 | `src/__init__.py` | Makes `src` importable as a Python package. |
 | `tests/test_training.py` | Checks dataset size, both models, metric ranges, and invalid model handling. |
@@ -76,7 +79,7 @@ Logistic regression uses median imputation and `StandardScaler` inside a scikit-
 | F1 | Harmonic mean of benign precision and benign recall. |
 | ROC AUC | How well the benign probability ranks benign above malignant across thresholds. |
 
-**Built-in displayed recall is not malignant recall.** A health application would need to study missed malignant cases separately. The app does not yet run cross-validation, tune hyperparameters, calculate confidence intervals, or save a deployable model.
+**Built-in displayed recall is not malignant recall.** A health application would need to study missed malignant cases separately. Cross-validation is used only when optional tuning is selected. The app does not calculate confidence intervals or save a deployable model.
 
 ## Tracking and comparison
 
@@ -89,16 +92,17 @@ SQLite is a single file on the machine running the app. Cloud storage may disapp
 - **Python:** One language for data loading, training, and UI.
 - **Streamlit:** An interactive dashboard without a separate frontend or API server.
 - **scikit-learn:** Established implementations for data loading, splitting, preprocessing, models, and metrics.
+- **Optuna:** Tries a bounded set of hyperparameters using training-only cross-validation. It is not reinforcement learning.
 - **SQLite:** A built-in single-file database sufficient for demo runs.
 - **pandas:** Converts saved run dictionaries to the comparison table.
 - **pytest and GitHub Actions:** Check basic behavior locally and after changes.
 - **Docker:** Packages one app instance; CI builds and smoke-checks it. It does not autoscale.
 
-## Next integration contracts
+## Current extensions and next contracts
 
-- **Optuna tuning (WaunCPU):** A separate `src/tuning.py` function accepts the same built-in or `DatasetSpec` data and returns a JSON-safe `Result`. It uses cross-validation on training rows only; the held-out test set is scored once after choosing settings. Default search size stays small for the public demo. This is hyperparameter search, not reinforcement learning.
-- **Drift signal (Eicap1-prog):** A separate `src/monitoring.py` function compares numeric features from reference and new batches. Its output explains the measure and threshold. Without labels for the new batch, it cannot measure accuracy degradation or predict future drift. The owner will integrate its UI.
+- **Optuna tuning (WaunCPU):** `src/tuning.py` accepts the same built-in or `DatasetSpec` data and returns a JSON-safe `Result`. It uses cross-validation on training rows only; the held-out test set is scored once after choosing settings. The dashboard keeps this optional so the manual run remains fast.
+- **Drift signal (Eicap1-prog):** `src/monitoring.py` compares numeric features from reference training rows and a new batch. Its output explains the measure and threshold. The dashboard can demonstrate a synthetic shift or accept another CSV. Without labels for the new batch, it cannot measure accuracy degradation or predict future drift.
 - **PyTorch/Lightning classifier (Oluwasegun):** A small CPU neural network lives in its own module and returns the same `Result` shape and metrics. Use the same split, positive-class mapping, training-only preprocessing, and bounded run time. Verify cloud installation before enabling it in the live app. PyTorch hooks may later log internal outputs, but hooks alone do not detect drift.
 - **LLM explanation (Oluwasegun):** Optional commentary on saved settings and aggregate metrics only. Keep the secret in deployment settings; send no uploaded rows. Label generated suggestions as interpretations rather than measured results.
 
-These modules remain planned until their PRs merge and the public app is verified. Dockerfile generation, Swarm/Kubernetes scaling, transformer-based drift prediction, alerts, and a complete automated deployment pipeline are also outside the current release. README and presentation claims must match the live app.
+PyTorch and LLM commentary remain planned. Dockerfile generation, Swarm/Kubernetes scaling, transformer-based drift prediction, alerts, and a complete automated deployment pipeline are also outside the current release. README and presentation claims must match the live app.
