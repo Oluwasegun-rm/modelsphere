@@ -10,7 +10,7 @@ All three students must make substantive commits from their own accounts. The ro
 * **[@WaunCPU](https://github.com/WaunCPU)** — training engine, validation, and optional tuning ([issue #2](https://github.com/Oluwasegun-rm/modelsphere/issues/2))
 * **[@Eicap1-prog](https://github.com/eicap1-prog)** — experiment tracking and optional drift signal ([issue #3](https://github.com/Oluwasegun-rm/modelsphere/issues/3))
 
-The initial scaffold was created with Codex; it is not represented as a student's individual work. Teammate invitations are pending acceptance, after which issues #2 and #3 can be formally assigned.
+The initial scaffold was created with Codex; it is not represented as a student's individual work. GitHub issue assignment requires each teammate to accept the collaborator invitation; check the issue assignees before submission.
 
 ---
 
