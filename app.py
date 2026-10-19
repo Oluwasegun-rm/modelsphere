@@ -1,7 +1,5 @@
 """ModelSphere Streamlit dashboard."""
 
-from dataclasses import replace
-
 import pandas as pd
 import streamlit as st
 
@@ -43,9 +41,6 @@ if run:
         # Tracking saves that summary; it does not save a model or raw dataset rows.
         result = train_model(model, test_size=test_size, random_state=int(seed), c=c,
                              n_estimators=n_estimators, max_depth=max_depth)
-        result = replace(result, parameters={**result.parameters,
-                                             "test_size": float(test_size),
-                                             "random_state": int(seed)})
         run_id = save_experiment(result)
         st.success(f"Experiment #{run_id} saved. Split: {result.train_count} train / {result.test_count} test.")
         cols = st.columns(len(result.metrics))
