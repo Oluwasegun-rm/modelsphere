@@ -11,6 +11,7 @@ RUN python -m pip install --no-cache-dir -r requirements.txt
 COPY app.py ./
 COPY src/ ./src/
 COPY scripts/ ./scripts/
+COPY .streamlit/config.toml ./.streamlit/config.toml
 
 EXPOSE 8501
 

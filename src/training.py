@@ -1,16 +1,13 @@
-"""Leakage-safe training on the bundled Wisconsin breast cancer dataset.
+"""Leakage-safe training on the bundled dataset or a validated uploaded CSV.
 
-Positive class: scikit-learn encodes the labels as ``0 = malignant`` and
-``1 = benign``. Every metric reported here treats class 1 (benign) as the
-positive class, so "recall" means "of the truly benign cases, how many did the
-model find?".
+Every metric treats encoded class 1 as positive. For the bundled dataset this
+means benign; for an upload it means the class selected by the user.
 
 Evaluation rules this module follows:
 
 * The data is split once into a training part and a held-out test part
   (stratified, so both parts keep the same benign/malignant mix).
-* The model, including the scaler for logistic regression, is fitted on the
-  training part only.
+* Imputation and any scaling are fitted on the training part only.
 * Every reported score is computed on the held-out test part, which the model
   never saw while learning.
 * The same settings (including the random seed) always give the same split and
@@ -25,11 +22,14 @@ from typing import Any
 import numpy as np
 from sklearn.datasets import load_breast_cancer
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+
+from src.datasets import DatasetSpec
 
 POSITIVE_CLASS = 1
 POSITIVE_CLASS_NAME = "benign"
@@ -102,16 +102,18 @@ def build_estimator(model: str, *, random_state: int, c: float, n_estimators: in
                     max_depth: int | None):
     """Create an untrained model. Settings must already be validated."""
     if model == "Logistic regression":
-        # The scaler is part of the pipeline, so it is fitted on training rows only.
-        return make_pipeline(StandardScaler(), LogisticRegression(C=c, max_iter=2000))
-    return RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth,
-                                  random_state=random_state, n_jobs=-1)
+        # Imputation and scaling are fitted on training rows only.
+        return make_pipeline(SimpleImputer(strategy="median"), StandardScaler(),
+                             LogisticRegression(C=c, max_iter=2000))
+    return make_pipeline(SimpleImputer(strategy="median"),
+                         RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth,
+                                                random_state=random_state, n_jobs=-1))
 
 
 def _score_on_held_out(estimator: Any, x_test: np.ndarray, y_test: np.ndarray) -> dict[str, float]:
-    """Score a trained model on rows it never saw. Positive class is benign (1)."""
+    """Score a trained model on rows it never saw. Encoded class 1 is positive."""
     predictions = estimator.predict(x_test)
-    # Column 1 of predict_proba is the probability of class 1 (benign).
+    # Column 1 of predict_proba is the probability of encoded class 1.
     probabilities = estimator.predict_proba(x_test)[:, POSITIVE_CLASS]
     return {
         "accuracy": float(accuracy_score(y_test, predictions)),
@@ -123,7 +125,8 @@ def _score_on_held_out(estimator: Any, x_test: np.ndarray, y_test: np.ndarray) -
 
 
 def train_model(model: str, *, test_size: float = 0.2, random_state: int = 42,
-                c: float = 1.0, n_estimators: int = 100, max_depth: int | None = None) -> Result:
+                c: float = 1.0, n_estimators: int = 100, max_depth: int | None = None,
+                dataset: DatasetSpec | None = None) -> Result:
     """Train one model and report scores measured on held-out test data.
 
     Raises ValueError for any setting that is not valid.
@@ -134,10 +137,14 @@ def train_model(model: str, *, test_size: float = 0.2, random_state: int = 42,
     n_estimators = int(n_estimators)
     max_depth = None if max_depth is None else int(max_depth)
 
-    data = load_breast_cancer()
-    train_rows, test_rows = split_indices(data.target, test_size, random_state)
-    x_train, y_train = data.data[train_rows], data.target[train_rows]
-    x_test, y_test = data.data[test_rows], data.target[test_rows]
+    if dataset is None:
+        data = load_breast_cancer()
+        features, target = data.data, data.target
+    else:
+        features, target = dataset.features.to_numpy(dtype=float), dataset.target
+    train_rows, test_rows = split_indices(target, test_size, random_state)
+    x_train, y_train = features[train_rows], target[train_rows]
+    x_test, y_test = features[test_rows], target[test_rows]
 
     estimator = build_estimator(model, random_state=random_state, c=c,
                                 n_estimators=n_estimators, max_depth=max_depth)
@@ -150,4 +157,6 @@ def train_model(model: str, *, test_size: float = 0.2, random_state: int = 42,
         parameters = {"n_estimators": n_estimators, "max_depth": max_depth}
     # Saving the split settings lets anyone repeat a saved experiment exactly.
     parameters.update({"test_size": test_size, "random_state": random_state})
+    if dataset is not None:
+        parameters["dataset"] = dataset.metadata()
     return Result(model, parameters, metrics, len(train_rows), len(test_rows))
