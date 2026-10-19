@@ -43,8 +43,10 @@ Overall result
   its 30 features are strongly linked and chance flags come in clusters. An
   occasional false warning is therefore expected. A partial real shift (8 of 30 features moved by
   0.75 standard deviations) was caught in every trial.
-* ``watch``: some features are flagged but not enough for a warning, or columns of
-  the reference batch were missing from the new batch.
+* ``watch``: some features are flagged but not enough for a warning, or some
+  columns could not be compared (missing from the new batch, or numeric in one
+  batch but text in the other). An "all clear" is never given while a column
+  that should have been compared was left out.
 * ``no_signal``: no checked feature is flagged.
 * ``not_enough_data``: no feature could be checked.
 
@@ -62,6 +64,13 @@ Missing values and other edge cases
   missing from the new batch, extra columns, and non-numeric columns are listed
   in the report rather than silently ignored. If no column can be compared, a
   ValueError explains why.
+* A shared column that is numeric in one batch but text (or another non-numeric
+  type) in the other is listed in ``type_mismatch`` and also in
+  ``skipped_non_numeric``. It is not converted or guessed, because a stray entry
+  such as "N/A" usually means the new batch was read incorrectly. It makes the
+  overall status at least ``watch`` and the message names the column. A column
+  that is text in BOTH batches (for example a label) is only listed in
+  ``skipped_non_numeric`` and does not change the status.
 
 What this does NOT tell you
 ---------------------------
@@ -126,7 +135,8 @@ class DriftReport:
     features: tuple[FeatureDrift, ...]
     missing_in_new: tuple[str, ...]
     extra_in_new: tuple[str, ...]
-    skipped_non_numeric: tuple[str, ...]
+    skipped_non_numeric: tuple[str, ...]  # shared columns not compared (includes type_mismatch)
+    type_mismatch: tuple[str, ...] = ()  # numeric in one batch but not in the other
     limits: str = LIMITS
 
     def to_dict(self) -> dict:
@@ -171,7 +181,11 @@ def _check_frame(frame, label: str) -> None:
 
 
 def _choose_features(reference: pd.DataFrame, new: pd.DataFrame, features):
-    """Return (features to compare, missing in new, extra in new, skipped non-numeric)."""
+    """Return (features to compare, missing in new, extra in new, skipped, type mismatch).
+
+    ``skipped`` is every shared column that was not compared; ``type mismatch`` is the part
+    of it that is numeric in one batch but not in the other.
+    """
     missing_in_new = tuple(str(c) for c in reference.columns if c not in new.columns)
     extra_in_new = tuple(str(c) for c in new.columns if c not in reference.columns)
 
@@ -185,18 +199,22 @@ def _choose_features(reference: pd.DataFrame, new: pd.DataFrame, features):
         text = [str(c) for c in chosen if not (_is_numeric(reference[c]) and _is_numeric(new[c]))]
         if text:
             raise ValueError(f"These features are not numeric in both batches: {', '.join(text)}.")
-        return chosen, missing_in_new, extra_in_new, ()
+        return chosen, missing_in_new, extra_in_new, (), ()
 
     shared = [c for c in reference.columns if c in new.columns]
     chosen = [c for c in shared if _is_numeric(reference[c]) and _is_numeric(new[c])]
     skipped = tuple(str(c) for c in shared if c not in chosen)
+    type_mismatch = tuple(str(c) for c in shared
+                          if c not in chosen and _is_numeric(reference[c]) != _is_numeric(new[c]))
     if not chosen:
+        hint = (f" These columns are numeric in only one batch: {', '.join(type_mismatch)}."
+                if type_mismatch else "")
         raise ValueError(
-            "The two batches have no numeric column in common, so nothing can be compared. "
-            f"Reference columns: {[str(c) for c in reference.columns]}; "
+            "The two batches have no numeric column in common, so nothing can be compared."
+            f"{hint} Reference columns: {[str(c) for c in reference.columns]}; "
             f"new columns: {[str(c) for c in new.columns]}."
         )
-    return chosen, missing_in_new, extra_in_new, skipped
+    return chosen, missing_in_new, extra_in_new, skipped, type_mismatch
 
 
 def _compare_feature(name, reference_series: pd.Series, new_series: pd.Series) -> FeatureDrift:
@@ -246,7 +264,7 @@ def detect_numeric_drift(reference: pd.DataFrame, new: pd.DataFrame, *, features
     """
     _check_frame(reference, "reference")
     _check_frame(new, "new")
-    chosen, missing_in_new, extra_in_new, skipped = _choose_features(reference, new, features)
+    chosen, missing_in_new, extra_in_new, skipped, type_mismatch = _choose_features(reference, new, features)
 
     results = tuple(_compare_feature(c, reference[c], new[c]) for c in chosen)
     checked = [r for r in results if r.status != "not_enough_data"]
@@ -279,15 +297,28 @@ def detect_numeric_drift(reference: pd.DataFrame, new: pd.DataFrame, *, features
     if missing_in_new:
         extras.append(f"{len(missing_in_new)} reference column(s) are missing from the new batch "
                       f"({', '.join(missing_in_new)}) and could not be compared.")
-        if status == "no_signal":
-            status = "watch"
-            message = (f"Watch: none of the {len(checked)} compared features differ clearly from the "
-                       "reference batch, but the new batch is missing reference columns. This does "
-                       "not prove the model is still accurate.")
+    if type_mismatch:
+        names = ", ".join(f"'{name}'" for name in type_mismatch)
+        if len(type_mismatch) == 1:
+            extras.append(f"Column {names} is numeric in one batch but not in the other (for example, "
+                          "text), so it could not be compared. Check that the new batch was read "
+                          "correctly: a stray entry such as 'N/A' turns a number column into text.")
+        else:
+            extras.append(f"Columns {names} are numeric in one batch but not in the other (for example, "
+                          "text), so they could not be compared. Check that the new batch was read "
+                          "correctly: a stray entry such as 'N/A' turns a number column into text.")
+    if status == "no_signal" and (missing_in_new or type_mismatch):
+        # Never give an all-clear headline while a column that should have been compared was left out.
+        status = "watch"
+        message = (f"Watch: none of the {len(checked)} compared features differ clearly from the "
+                   "reference batch, but some columns could not be compared (see below). This does "
+                   "not prove the model is still accurate.")
     if extra_in_new:
         extras.append(f"{len(extra_in_new)} extra column(s) in the new batch were ignored.")
-    if skipped:
-        extras.append(f"{len(skipped)} shared column(s) were skipped because they are not numeric in both batches.")
+    ordinary_skipped = [name for name in skipped if name not in type_mismatch]
+    if ordinary_skipped:  # e.g. a text label that is text in both batches: informational only
+        extras.append(f"{len(ordinary_skipped)} shared column(s) were skipped because they are not "
+                      "numeric in either batch.")
     if extras:
         message = message + " " + " ".join(extras)
 
@@ -295,5 +326,5 @@ def detect_numeric_drift(reference: pd.DataFrame, new: pd.DataFrame, *, features
         status=status, message=message, reference_rows=int(len(reference)), new_rows=int(len(new)),
         features_compared=len(results), features_checked=len(checked), features_flagged=len(flagged),
         share_flagged=share, features=results, missing_in_new=missing_in_new,
-        extra_in_new=extra_in_new, skipped_non_numeric=skipped,
+        extra_in_new=extra_in_new, skipped_non_numeric=skipped, type_mismatch=type_mismatch,
     )

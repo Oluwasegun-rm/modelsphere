@@ -288,7 +288,94 @@ def test_numeric_column_that_arrives_as_text_is_skipped_not_guessed():
     new["b"] = new["b"].astype(str)
     report = detect_numeric_drift(reference, new)
     assert report.skipped_non_numeric == ("b",)
-    assert [f.feature for f in report.features] == ["a"]
+    assert [f.feature for f in report.features] == ["a"]  # "b" is not converted or compared
+
+
+def _similar_batches_with_text_in_new(rng, reverse=False):
+    """Same data twice (so no real drift), except column 'b' has numbers in one batch and text in the other."""
+    reference = make_frame(rng, 300, ("a", "b", "c"))
+    new = reference.sample(200, random_state=0).reset_index(drop=True)
+    new["b"] = new["b"].round(2).astype(str)
+    new.loc[3, "b"] = "N/A"  # the kind of stray entry that turns a whole column into text
+    return (new, reference) if reverse else (reference, new)
+
+
+def test_numeric_in_reference_but_text_in_new_is_at_least_a_watch_and_names_the_column():
+    reference, new = _similar_batches_with_text_in_new(np.random.default_rng(40))
+    report = detect_numeric_drift(reference, new)
+    assert report.features_flagged == 0  # nothing that WAS compared drifted...
+    assert report.status == "watch"      # ...but that must not look like an all clear
+    assert report.type_mismatch == ("b",)
+    assert "b" in report.skipped_non_numeric
+    assert [f.feature for f in report.features] == ["a", "c"]
+    assert "Column 'b' is numeric in one batch but not in the other" in report.message
+    assert "could not be compared" in report.message
+    assert not report.message.startswith("No drift signal")
+
+
+def test_text_in_reference_but_numeric_in_new_is_treated_the_same_way():
+    reference, new = _similar_batches_with_text_in_new(np.random.default_rng(41), reverse=True)
+    report = detect_numeric_drift(reference, new)
+    assert (report.status, report.type_mismatch) == ("watch", ("b",))
+    assert "'b'" in report.message
+
+
+def test_several_mismatched_columns_are_all_named():
+    rng = np.random.default_rng(42)
+    reference = make_frame(rng, 200, ("a", "b", "c"))
+    new = reference.sample(150, random_state=0).reset_index(drop=True)
+    new["b"], new["c"] = new["b"].astype(str), new["c"].astype(str)
+    report = detect_numeric_drift(reference, new)
+    assert report.type_mismatch == ("b", "c")
+    assert report.status == "watch"
+    assert "Columns 'b', 'c' are numeric in one batch" in report.message
+
+
+def test_a_text_label_that_is_text_in_both_batches_is_skipped_without_changing_the_status():
+    rng = np.random.default_rng(43)
+    reference = make_frame(rng, 300, ("a", "b"))
+    reference["passed"] = rng.choice(["yes", "no"], 300)
+    new = reference.sample(200, random_state=0).reset_index(drop=True)
+    new["passed"] = rng.choice(["yes", "no"], 200)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # also no Python warning of any kind
+        report = detect_numeric_drift(reference, new)
+    assert report.status == "no_signal"
+    assert report.type_mismatch == ()
+    assert report.skipped_non_numeric == ("passed",)
+    assert [f.feature for f in report.features] == ["a", "b"]
+    assert "could not be compared" not in report.message
+    assert "numeric in either batch" in report.message  # mentioned, but only as information
+
+
+def test_a_real_warning_stays_a_warning_and_still_names_the_mismatched_column():
+    rng = np.random.default_rng(44)
+    reference = make_frame(rng, 300, ("a", "b", "c", "d"))
+    new = make_frame(rng, 300, ("a", "b", "c", "d"), shifts={"a": 3.0, "b": 3.0})
+    new["d"] = new["d"].astype(str)
+    report = detect_numeric_drift(reference, new)
+    assert report.status == "warning"  # not downgraded by the mismatch
+    assert report.type_mismatch == ("d",)
+    assert "Column 'd' is numeric in one batch" in report.message
+
+
+def test_mismatched_type_and_missing_column_are_both_reported():
+    rng = np.random.default_rng(45)
+    reference = make_frame(rng, 300, ("a", "b", "c"))
+    new = reference[["a", "b"]].sample(200, random_state=0).reset_index(drop=True)
+    new["b"] = new["b"].astype(str)
+    report = detect_numeric_drift(reference, new)
+    assert report.status == "watch"
+    assert report.type_mismatch == ("b",) and report.missing_in_new == ("c",)
+    assert "'b'" in report.message and "(c)" in report.message
+
+
+def test_when_the_only_shared_numeric_column_changes_type_the_error_names_it():
+    rng = np.random.default_rng(46)
+    reference = make_frame(rng, 50, ("a",))
+    new = reference.astype(str)
+    with pytest.raises(ValueError, match="numeric in only one batch: a"):
+        detect_numeric_drift(reference, new)
 
 
 def test_no_shared_numeric_columns_is_an_error_that_names_the_columns():
@@ -341,6 +428,7 @@ def test_report_is_json_safe_and_states_its_limits():
     payload = json.loads(json.dumps(report.to_dict(), allow_nan=False))
     assert payload["status"] == report.status
     assert len(payload["features"]) == 5
+    assert payload["type_mismatch"] == []  # the new field is part of the JSON output
     assert "not a prediction of future drift" in payload["limits"]
     assert "not a measurement of model accuracy" in payload["limits"]
     assert "does not show that model accuracy changed" in report.message
