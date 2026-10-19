@@ -10,6 +10,8 @@ st.set_page_config(page_title="ModelSphere", page_icon="🔬", layout="wide")
 st.title("🔬 ModelSphere")
 st.caption("Texas Toast · Reproducible classification experiments")
 
+# The UI asks the training module for facts about the bundled dataset.
+# It does not load or modify patient rows itself.
 summary = dataset_summary()
 st.subheader("Dataset")
 st.write(f"Breast Cancer Wisconsin (Diagnostic): {summary['rows']} rows, {summary['features']} numeric features. Target: {', '.join(summary['classes'])}.")
@@ -17,6 +19,8 @@ st.caption("Metric positive class: benign (class 1). Scores come from the held-o
 st.info("Educational demonstration only. Predictions are not medical advice.")
 
 with st.sidebar:
+    # These controls become arguments to one shared training function.
+    # Keeping the split and seed fixed makes two model runs easier to compare.
     st.header("Configure experiment")
     model = st.selectbox("Classification model", ["Logistic regression", "Random forest"])
     test_size = st.slider("Test fraction", 0.1, 0.4, 0.2, 0.05)
@@ -33,6 +37,8 @@ with st.sidebar:
 
 if run:
     try:
+        # Training returns a small summary of settings and test scores.
+        # Tracking saves that summary; it does not save a model or raw dataset rows.
         result = train_model(model, test_size=test_size, random_state=int(seed), c=c,
                              n_estimators=n_estimators, max_depth=max_depth)
         run_id = save_experiment(result)
@@ -45,6 +51,7 @@ if run:
 
 st.subheader("Compare saved experiments")
 try:
+    # Read summaries from SQLite and display them as a simple table.
     experiments = list_experiments()
     if experiments:
         frame = pd.DataFrame([{"id": item["id"], "created (UTC)": item["created_at"],

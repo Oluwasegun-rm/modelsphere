@@ -47,6 +47,8 @@ streamlit run app.py
 
 Run automated checks with `python -m pytest -q` and the non-UI smoke check with `python -m scripts.smoke_test`.
 
+For a guided first run and a fair model comparison, follow the [local walkthrough](docs/local_walkthrough.md).
+
 ---
 
 ## 📊 Dataset
@@ -91,3 +93,7 @@ These are results from one fixed split of a small, easy dataset; they do not est
 5. Merge working core improvements before optional features. Keep this README accurate about what is live.
 
 The detailed task split is in [team tasks](docs/team_tasks.md), and agent development rules are in [AGENTS.md](AGENTS.md). GitHub Actions runs the tests on pushes and pull requests.
+
+## 🎓 Understand and present the project
+
+The [architecture guide](docs/architecture.md) explains the data flow, every major file, the training and evaluation design, model choices, metrics, and technology choices. The [presentation script](docs/presentation.md) gives the team a short live demo plan and answers to likely class questions. The [local walkthrough](docs/local_walkthrough.md) shows how to train and compare two experiments step by step.
