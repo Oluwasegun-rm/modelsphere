@@ -1,6 +1,6 @@
 # Project Title: ModelSphere
 
-ModelSphere is a compact machine learning experiment dashboard. It trains two classification models on the Breast Cancer Wisconsin dataset, evaluates them on a held-out test set, and saves results for side-by-side comparison. Built by team **Texas Toast** with Streamlit, scikit-learn, and SQLite.
+ModelSphere is a compact machine learning experiment dashboard. It trains two classification models on the built-in Breast Cancer Wisconsin dataset or a small uploaded numeric CSV with a two-class target, evaluates them on a held-out test set, and saves results for side-by-side comparison. Built by team **Texas Toast** with Streamlit, scikit-learn, and SQLite.
 
 ## 👥 Team Members & Contributions
 
@@ -48,6 +48,7 @@ streamlit run app.py
 Run automated checks with `python -m pytest -q` and the non-UI smoke check with `python -m scripts.smoke_test`.
 
 For a guided first run and a fair model comparison, follow the [local walkthrough](docs/local_walkthrough.md).
+For CSV limits, validation, and saved-run behavior, see the [upload guide](docs/upload.md).
 To build and run the same app in Docker, follow the [container guide](docs/container.md). The Docker image is checked in GitHub Actions; the public demo runs on Streamlit Community Cloud.
 
 ---
@@ -57,6 +58,8 @@ To build and run the same app in Docker, follow the [container guide](docs/conta
 * **Source:** [UCI Breast Cancer Wisconsin (Diagnostic)](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic), accessed through [scikit-learn's bundled loader](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_breast_cancer.html).
 * **Description:** 569 observations, 30 numeric features derived from breast mass images, and a binary malignant/benign label. In scikit-learn, class 0 is malignant and class 1 is benign.
 * **Data pipeline:** `load_breast_cancer()` supplies the data with the package. The app makes a stratified 80/20 split by default; the random seed and test fraction are configurable. No data file needs to be downloaded separately.
+
+Users may instead upload a UTF-8 CSV under 5 MB, choose a two-class target and up to 50 numeric feature columns, inspect missing values and class counts, and train the same models. Missing numeric values are filled using medians fitted on training data only. Rows without a target are excluded with a visible count; exact duplicates are reported but kept. Uploaded rows are not saved in experiment history. History records a fingerprint and the selected dataset settings so comparisons stay within one dataset and feature selection.
 
 This is an educational dataset and app, not a clinical diagnostic tool.
 
@@ -68,7 +71,7 @@ This is an educational dataset and app, not a clinical diagnostic tool.
 * **Frameworks:** scikit-learn for data, training, and evaluation; Streamlit for the interface; SQLite for experiment records.
 * **Training process:** A stratified train/test split keeps the holdout data out of fitting. Logistic regression uses `StandardScaler` inside a training-only pipeline. Random forest uses a fixed random seed. The app saves settings and metrics, not model binaries or row-level data.
 
-Hyperparameter tuning with Optuna, drift monitoring, CSV upload, and AI insights are proposed extensions. They are not implemented in the current release.
+Hyperparameter tuning with Optuna, drift monitoring, a PyTorch/Lightning classifier, and AI insights are planned next steps. They are not implemented in this release. The CSV workflow becomes available in the public app after this change is merged and deployed.
 
 ---
 
@@ -93,7 +96,7 @@ These are results from one fixed split of a small, easy dataset; they do not est
 4. Run `python -m pytest -q` and keep `streamlit run app.py` working.
 5. Merge working core improvements before optional features. Keep this README accurate about what is live.
 
-The detailed task split is in [team tasks](docs/team_tasks.md), and agent development rules are in [AGENTS.md](AGENTS.md). GitHub Actions runs the tests and container checks on pushes and pull requests.
+The [implementation plan](docs/implementation_plan.md) maps the course brief to current and next work. The detailed task split is in [team tasks](docs/team_tasks.md), and agent development rules are in [AGENTS.md](AGENTS.md). GitHub Actions runs the tests and container checks on pushes and pull requests.
 
 ## 🎓 Understand and present the project
 
