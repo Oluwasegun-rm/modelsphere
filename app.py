@@ -1,5 +1,7 @@
 """ModelSphere Streamlit dashboard."""
 
+from dataclasses import replace
+
 import pandas as pd
 import streamlit as st
 
@@ -41,6 +43,9 @@ if run:
         # Tracking saves that summary; it does not save a model or raw dataset rows.
         result = train_model(model, test_size=test_size, random_state=int(seed), c=c,
                              n_estimators=n_estimators, max_depth=max_depth)
+        result = replace(result, parameters={**result.parameters,
+                                             "test_size": float(test_size),
+                                             "random_state": int(seed)})
         run_id = save_experiment(result)
         st.success(f"Experiment #{run_id} saved. Split: {result.train_count} train / {result.test_count} test.")
         cols = st.columns(len(result.metrics))
@@ -50,14 +55,38 @@ if run:
         st.error(f"Experiment could not be saved: {exc}")
 
 st.subheader("Compare saved experiments")
+st.caption("For a fair comparison, keep the test fraction and random seed the same and change one model setting at a time.")
 try:
     # Read summaries from SQLite and display them as a simple table.
     experiments = list_experiments()
     if experiments:
-        frame = pd.DataFrame([{"id": item["id"], "created (UTC)": item["created_at"],
-                               "model": item["model"], "parameters": str(item["parameters"]),
-                               **item["metrics"]} for item in experiments])
+        rows = []
+        for item in experiments:
+            settings = item["parameters"]
+            model_settings = {key: value for key, value in settings.items()
+                              if key not in ("test_size", "random_state")}
+            rows.append({"id": item["id"], "created (UTC)": item["created_at"],
+                         "model": item["model"], "test fraction": settings.get("test_size", "unknown"),
+                         "seed": settings.get("random_state", "unknown"),
+                         "model settings": str(model_settings), **item["metrics"]})
+        frame = pd.DataFrame(rows)
         st.dataframe(frame, hide_index=True, use_container_width=True)
+
+        latest = experiments[0]
+        latest_settings = latest["parameters"]
+        if "test_size" in latest_settings and "random_state" in latest_settings:
+            previous = next((item for item in experiments[1:]
+                             if item["parameters"].get("test_size") == latest_settings["test_size"]
+                             and item["parameters"].get("random_state") == latest_settings["random_state"]), None)
+            if previous:
+                difference = latest["metrics"]["f1"] - previous["metrics"]["f1"]
+                st.info(f"Automatic comparison: run #{latest['id']} has test F1 {latest['metrics']['f1']:.3f}; "
+                        f"run #{previous['id']} has {previous['metrics']['f1']:.3f} "
+                        f"(difference {difference:+.3f}). Both used the same test split and seed.")
+            else:
+                st.caption("Save another run with the same test fraction and seed to see an automatic comparison.")
+        else:
+            st.caption("Older runs may not show a test fraction or seed because those settings were not recorded yet.")
     else:
         st.write("No saved experiments yet. Train a model to start comparing runs.")
 except OSError as exc:
