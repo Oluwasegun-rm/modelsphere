@@ -1,0 +1,28 @@
+name: Container
+on:
+  push:
+  pull_request:
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t modelsphere:ci .
+      - name: Check training and saved experiments inside image
+        run: docker run --rm modelsphere:ci python -m scripts.smoke_test
+      - name: Start app
+        run: docker run --rm -d --name modelsphere-ci -p 8501:8501 modelsphere:ci
+      - name: Check app health
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:8501/_stcore/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs modelsphere-ci
+          exit 1
+      - name: Stop app
+        if: always()
+        run: docker rm -f modelsphere-ci || true
