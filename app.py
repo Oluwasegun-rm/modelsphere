@@ -2,10 +2,13 @@
 
 import pandas as pd
 import streamlit as st
+from sklearn.datasets import load_breast_cancer
 
 from src.datasets import BUILTIN_DATASET_ID, prepare_dataset, read_csv
-from src.training import dataset_summary, train_model
+from src.monitoring import detect_numeric_drift
+from src.training import dataset_summary, split_indices, train_model
 from src.tracking import list_experiments, save_experiment
+from src.tuning import tune_model
 
 st.set_page_config(page_title="ModelSphere", page_icon="🔬", layout="wide")
 st.title("🔬 ModelSphere")
@@ -36,7 +39,9 @@ else:
             })
             with st.expander("Inspect columns and missing values"):
                 st.dataframe(quality, hide_index=True, use_container_width=True)
-            target_name = st.selectbox("Target column (what to predict)", frame.columns)
+            # Many classroom CSVs put the answer last. Users can still choose any column.
+            target_name = st.selectbox("Target column (what to predict)", frame.columns,
+                                       index=len(frame.columns) - 1)
             numeric_features = [column for column in frame.columns if column != target_name
                                 and pd.api.types.is_numeric_dtype(frame[column])]
             text_features = [column for column in frame.columns if column != target_name
@@ -79,7 +84,12 @@ with st.sidebar:
     model = st.selectbox("Classification model", ["Logistic regression", "Random forest"])
     test_size = st.slider("Test fraction", 0.1, 0.4, 0.2, 0.05)
     seed = st.number_input("Random seed", 0, 100000, 42, 1)
-    if model == "Logistic regression":
+    auto_tune = st.checkbox("Tune automatically with Optuna", value=False)
+    if auto_tune:
+        trials = st.slider("Tuning trials", 3, 20, 12)
+        st.caption("Tries settings on training rows only, then scores the test rows once.")
+        c, n_estimators, max_depth = 1.0, 100, None
+    elif model == "Logistic regression":
         c = st.number_input("Regularization C", min_value=0.01, max_value=100.0, value=1.0)
         n_estimators, max_depth = 100, None
     else:
@@ -87,16 +97,26 @@ with st.sidebar:
         depth = st.slider("Maximum depth (0 = unlimited)", 0, 30, 0)
         max_depth = None if depth == 0 else depth
         c = 1.0
-    run = st.button("Train and save", type="primary", disabled=not ready)
+    run = st.button("Tune, train and save" if auto_tune else "Train and save",
+                    type="primary", disabled=not ready)
 
 if run:
     try:
         # Training returns a small summary of settings and test scores.
         # Tracking saves that summary; it does not save a model or raw dataset rows.
-        result = train_model(model, test_size=test_size, random_state=int(seed), c=c,
-                             n_estimators=n_estimators, max_depth=max_depth, dataset=dataset)
+        if auto_tune:
+            result = tune_model(model, n_trials=trials, test_size=test_size,
+                                random_state=int(seed), dataset=dataset)
+        else:
+            result = train_model(model, test_size=test_size, random_state=int(seed), c=c,
+                                 n_estimators=n_estimators, max_depth=max_depth, dataset=dataset)
         run_id = save_experiment(result)
         st.success(f"Experiment #{run_id} saved. Split: {result.train_count} train / {result.test_count} test.")
+        if auto_tune:
+            tuning = result.parameters["tuning"]
+            st.caption(f"Best training-only cross-validation ROC AUC: "
+                       f"{tuning['validation_score']:.3f} across {tuning['trials']} trials. "
+                       "The scores below come from the held-out test rows.")
         cols = st.columns(len(result.metrics))
         for col, (name, value) in zip(cols, result.metrics.items()):
             col.metric(name.replace("_", " ").upper(), f"{value:.3f}")
@@ -113,11 +133,14 @@ try:
         rows = []
         for item in experiments:
             settings = item["parameters"]
+            tuning = settings.get("tuning") or {}
             model_settings = {key: value for key, value in settings.items()
-                              if key not in ("test_size", "random_state", "dataset")}
+                              if key not in ("test_size", "random_state", "dataset", "tuning")}
             rows.append({"id": item["id"], "created (UTC)": item["created_at"],
-                         "model": item["model"], "test fraction": settings.get("test_size", "unknown"),
-                         "seed": settings.get("random_state", "unknown"),
+                         "model": item["model"], "method": "Optuna" if tuning else "Manual",
+                         "validation ROC AUC": tuning.get("validation_score"),
+                         "test fraction": settings.get("test_size"),
+                         "seed": settings.get("random_state"),
                          "model settings": str(model_settings), **item["metrics"]})
         frame = pd.DataFrame(rows)
         st.dataframe(frame, hide_index=True, use_container_width=True)
@@ -144,3 +167,55 @@ try:
             st.write("Choose a valid dataset to see its experiment history.")
 except OSError as exc:
     st.warning(f"Experiment history unavailable: {exc}")
+
+st.subheader("Check data drift")
+st.caption("Compare the numeric features used for training with a new batch. This checks input data, not model accuracy.")
+if ready:
+    example = "Similar data"
+    if source == "Built-in demo":
+        batch_source = st.radio("New batch", ["Built-in example", "Upload another CSV"], horizontal=True)
+        if batch_source == "Built-in example":
+            example = st.selectbox("Example", ["Similar data", "Simulated shift"])
+            st.caption("The simulated shift adds an artificial change to eight features for demonstration.")
+    else:
+        batch_source = "Upload another CSV"
+    new_upload = None
+    if batch_source == "Upload another CSV":
+        st.caption("Upload a second CSV with the same numeric feature columns. A target column is optional; at least 30 rows per feature are needed.")
+        new_upload = st.file_uploader("New batch CSV", type="csv", key="drift_batch")
+    check_drift = st.button("Check drift", disabled=batch_source == "Upload another CSV" and new_upload is None)
+    if check_drift:
+        try:
+            if dataset is None:
+                built_in = load_breast_cancer(as_frame=True)
+                reference_features = built_in.data
+                reference_target = built_in.target.to_numpy()
+            else:
+                reference_features = dataset.features
+                reference_target = dataset.target
+            reference_rows, example_rows = split_indices(reference_target, float(test_size), int(seed))
+            reference_batch = reference_features.iloc[reference_rows]
+
+            if batch_source == "Built-in example":
+                new_batch = reference_features.iloc[example_rows].copy()
+                if example == "Simulated shift":
+                    for column in new_batch.columns[:8]:
+                        new_batch[column] += 2 * reference_batch[column].std()
+            else:
+                new_batch = read_csv(new_upload.getvalue())
+            report = detect_numeric_drift(reference_batch, new_batch)
+            if report.status == "warning":
+                st.warning(report.message)
+            elif report.status == "watch":
+                st.info(report.message)
+            elif report.status == "not_enough_data":
+                st.warning(report.message)
+            else:
+                st.success(report.message)
+            st.dataframe(pd.DataFrame(report.to_dict()["features"]), hide_index=True,
+                         use_container_width=True)
+            st.caption(report.limits)
+        except (TypeError, ValueError) as exc:
+            st.error(f"Drift check could not run: {exc}")
+else:
+    st.write("Choose a valid dataset first.")
