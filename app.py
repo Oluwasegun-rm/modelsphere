@@ -13,6 +13,7 @@ st.caption("Texas Toast · Reproducible classification experiments")
 summary = dataset_summary()
 st.subheader("Dataset")
 st.write(f"Breast Cancer Wisconsin (Diagnostic): {summary['rows']} rows, {summary['features']} numeric features. Target: {', '.join(summary['classes'])}.")
+st.caption("Metric positive class: benign (class 1). Scores come from the held-out test split.")
 st.info("Educational demonstration only. Predictions are not medical advice.")
 
 with st.sidebar:

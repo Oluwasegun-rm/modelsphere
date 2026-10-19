@@ -30,6 +30,7 @@ Open the local address shown by Streamlit. To run tests: `make test`.
 4. Compare rows in the saved experiments table.
 
 The app uses a stratified train/test split. Logistic regression scales features inside a pipeline fitted on the training set only. The test set is held out from fitting. Results are educational and are not medical advice.
+Precision, recall, F1, and ROC AUC treat **benign (class 1)** as the positive class.
 
 ## Current scope and limitations
 
@@ -58,6 +59,8 @@ SQLite history is stored at `.local/modelsphere.db` by default. On cloud hosting
 ## Team contributions
 
 Work is split in [team tasks](docs/team_tasks.md). Each teammate should create a branch, make genuine commits for their own work, and open a pull request. GitHub history is the record of contributions; this README will be updated with each member's actual commits before submission.
+
+Task issues: [integration and deployment](https://github.com/Oluwasegun-rm/modelsphere/issues/1), [training engine](https://github.com/Oluwasegun-rm/modelsphere/issues/2), and [tracking and monitoring](https://github.com/Oluwasegun-rm/modelsphere/issues/3). GitHub will allow formal assignment of the teammate issues after their pending collaborator invitations are accepted.
 
 ## Deployment
 
