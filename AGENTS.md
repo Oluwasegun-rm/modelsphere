@@ -8,7 +8,7 @@ Ship a credible, working course project by the deadline. Keep each addition unde
 
 - Oluwasegun Soji-John owns integration, dashboard, README, demo capture, deployment, and final verification.
 - WaunCPU owns the training engine and bounded Optuna tuning in `src/training.py`, `src/tuning.py`, and their tests.
-- Eicap1-prog owns experiment persistence and the transparent drift signal in `src/tracking.py`, `src/monitoring.py`, and their tests.
+- Eicap1-prog owns experiment persistence, the transparent drift signal, and optional AI insights in `src/tracking.py`, `src/monitoring.py`, `src/insights.py`, and their tests.
 - Oluwasegun owns integration of both modules in `app.py`, public verification, and any separate PyTorch/Lightning model; coordinate before changing another owner's files.
 - Make changes on a named branch and open a pull request. Avoid editing another owner's files without coordinating first.
 - Each student must make their own substantive commits from their own GitHub account. Do not fabricate author metadata or contributions.

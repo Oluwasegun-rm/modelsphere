@@ -18,13 +18,13 @@ The initial scaffold was created with Codex; it is not represented as a student'
 
 * **Application URL:** [ModelSphere on Streamlit Community Cloud](https://efpmqnyhgu7aepxpdqxxi2.streamlit.app/)
 
-The public app was checked on October 20, 2026: logistic regression and the PyTorch neural network trained and saved runs, and the configured OpenAI Insights button returned an AI response. Random forest, CSV upload, Optuna tuning, and drift checks were verified in earlier live checks. Local SQLite history on Community Cloud may reset after an app restart.
+The public app was checked on October 20, 2026: logistic regression and the PyTorch neural network trained and saved runs; a synthetic CSV upload, Optuna tuning, and a simulated drift check worked; and the configured OpenAI Insights button returned an AI response. Random forest and uploaded-batch drift were verified in earlier live checks. Local SQLite history on Community Cloud may reset after an app restart.
 
 ### 🎥 Project Walkthrough
 
 ![Project Demo Walkthrough](docs/demo.gif)
 
-The GIF shows actual frames from the live app: model selection, configuration, and saved results.
+The GIF is a 12-scene walkthrough captured from the public app on October 20, 2026. It shows model selection, training metrics, saved-run comparison, PyTorch and Optuna controls, a synthetic CSV upload, a simulated drift warning, and a real AI explanation of two saved runs. The synthetic CSV scene is a workflow example; the evaluation table below uses the built-in dataset.
 
 ---
 
@@ -71,6 +71,8 @@ This is an educational dataset and app, not a clinical diagnostic tool.
 * **Frameworks:** scikit-learn for data preparation, baselines, and evaluation; PyTorch for the neural model and loss; Lightning for its bounded CPU training loop; Optuna for optional hyperparameter search on the two scikit-learn models; Streamlit for the interface; SQLite for experiment records.
 * **Training process:** A stratified train/test split keeps the holdout data out of fitting. Missing values are imputed using training medians; logistic regression and the neural network scale features using training data only. Random forest uses a fixed random seed. The neural network trains for at most 20 epochs on CPU. Optional Optuna tuning tries at most 20 settings for a scikit-learn model, using cross-validation on training rows only; the chosen model is then scored once on the held-out test rows. The app saves settings and metrics, not model binaries or row-level data.
 
+Optuna performs hyperparameter search; it is not reinforcement learning. The Docker image packages one app instance, and GitHub Actions tests the code and container. Container autoscaling, predictive transformer-based drift alerts, and automated deployment are outside this classroom release.
+
 The **Check data drift** section compares training features with a new batch, either an uploaded CSV or a clearly labelled built-in example. It reports a per-feature distribution gap and a plain-language status. This is an input-data warning, not a prediction of future drift or a measurement of model accuracy. At least 30 usable values per feature are needed in each batch. The check does not send alerts or save monitoring history. Predictive alerts and dynamic container scaling are not implemented in this release.
 
 The **AI Experiment Insights** section (`src/insights.py`) is optional. After you pick saved runs and click **Generate AI Insights**, it asks an OpenAI model to explain them in plain language and suggest things to try. The allowlisted request contains model settings, row counts, aggregate test metrics, tuning results, dataset kind, and feature counts for at most the five newest selected runs. Dataset rows, filenames, and column names are never sent. The text is labelled as AI-generated suggestions, separate from the measured results, and it cannot change any setting. Nothing is called until the button is clicked. Without an API key, without the `openai` package, or if the API fails, the app shows a clearly labelled local summary instead and keeps working. To enable it, set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) as an environment variable locally or in Streamlit secrets when deployed; never commit the key. Automated tests use a fake client; a real AI response was also observed in the public app on October 20, 2026.
@@ -85,8 +87,9 @@ The following values were observed in the live demo with an 80/20 stratified spl
 | :--- | ---: | ---: | ---: | ---: | ---: |
 | Logistic regression (C=1.0) | 0.982 | 0.986 | 0.986 | 0.986 | 0.995 |
 | Random forest (100 trees, unlimited depth) | 0.956 | 0.959 | 0.972 | 0.966 | 0.994 |
+| PyTorch neural network (2 epochs, 16 hidden units) | 0.921 | 0.932 | 0.944 | 0.938 | 0.984 |
 
-These are results from one fixed split of a small, easy dataset; they do not establish clinical suitability. The dashboard reports all five metrics for each new run and displays saved runs in a comparison table.
+These are results from one fixed split of a small, easy dataset; they do not establish clinical suitability. The two-epoch neural run is a quick workflow demonstration, not a tuned benchmark. The dashboard reports all five metrics for each new run and displays saved runs in a comparison table.
 
 ---
 

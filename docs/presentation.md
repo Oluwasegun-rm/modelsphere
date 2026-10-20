@@ -6,13 +6,13 @@ Aim for **5–7 minutes**, then leave time for questions. Use your own words. Re
 
 | Time | Speaker | Show | Main point |
 | --- | --- | --- | --- |
-| 0:00–0:45 | Oluwasegun | README and app | "ModelSphere compares classifier settings on held-out data." |
-| 0:45–1:45 | WaunCPU | `src/training.py`, dataset summary | "The Wisconsin dataset has 569 rows, 30 numeric features, and two labels. We use a stratified 80/20 split with seed 42." |
-| 1:45–2:45 | WaunCPU | Model controls and Optuna option | "Users can choose settings or try a small search. Optuna validates settings on training folds; final test rows remain untouched." |
-| 2:45–3:45 | Oluwasegun | Train logistic regression | "The scaler and model are fit only on training rows. These scores come from untouched test rows." |
-| 3:45–4:45 | Eicap1-prog | Train random forest; comparison table | "Each run saves its settings and scores. We keep seed and split fixed to compare fairly." |
-| 4:45–5:30 | Eicap1-prog | Tracking and drift check | "SQLite stores run summaries. A second batch can be compared with training features for a simple distribution warning." |
-| 5:30–6:15 | Oluwasegun | Tests and GitHub history | "Tests cover the whole workflow. The live app and GIF show the working scope." |
+| 0:00–0:40 | Oluwasegun | README and app | "ModelSphere compares classifier settings on held-out data." |
+| 0:40–1:50 | Dawaun | Dataset, training controls, first result | "We use 569 rows and a stratified 80/20 split. Preprocessing learns from training rows only." |
+| 1:50–2:40 | Dawaun | Optuna option | "Optuna checks settings on training folds; the held-out test rows are scored once." |
+| 2:40–3:35 | Oluwasegun | PyTorch and CSV controls, or GIF | "The same workflow also accepts a small numeric CSV and a bounded Lightning neural model." |
+| 3:35–4:45 | Eian | Saved-run comparison | "SQLite stores settings and scores. Keep the seed and split fixed for fair comparisons." |
+| 4:45–5:55 | Eian | Drift check and AI insights | "Drift checks inputs; the AI explains aggregate saved results. Neither establishes future model accuracy." |
+| 5:55–6:30 | Oluwasegun | GIF, tests, limitations | "The public demo and automated checks show the working scope; predictive alerts and autoscaling remain outside it." |
 
 Adjust speaking assignments to the code and commits each person actually contributes. Do not claim another person's work.
 
@@ -22,9 +22,9 @@ Adjust speaking assignments to the code and commits each person actually contrib
 2. Select logistic regression, C = 1.0, test fraction 0.20, seed 42. Click **Train and save**.
 3. Read test accuracy and F1; explain what a held-out score means.
 4. Select random forest, 100 trees, unlimited depth. Keep split and seed fixed. Click **Train and save**.
-5. Scroll to the comparison table and point to settings and metrics for both runs.
-6. Turn on **Tune automatically with Optuna** and run a small search. Explain that its validation score is from training folds and the metric cards are from held-out test rows.
-7. If time allows, choose **Neural network (PyTorch)** with two epochs and train it. Explain that this small Lightning model uses the same dataset split and test metrics as the baselines.
+5. Scroll to the comparison table and point to settings and metrics for both runs. Briefly show **Upload CSV** and explain the target, numeric features, and positive-class choices; the GIF has a synthetic example without needing another live upload.
+6. Show **Tune automatically with Optuna** and explain that validation uses training folds while the metric cards use held-out test rows. Run three trials only if time allows.
+7. Show **Neural network (PyTorch)** controls. Explain that the small Lightning model uses the same split and test metrics; use the GIF or saved run to show its result if time is short.
 8. Under **Check data drift**, select **Simulated shift** and click **Check drift**. Show the flagged features and explain that this is an artificial input change, not measured accuracy loss.
 9. Under **AI Experiment Insights**, select two runs and click **Generate AI Insights**. The public app returned a real AI response in the October 20 check. Point out the label that separates suggestions from measured results. If the API is unavailable, the same button shows a local summary.
 10. If the public app is slow, show `docs/demo.gif` and switch to the verified local app.
@@ -35,7 +35,7 @@ Adjust speaking assignments to the code and commits each person actually contrib
 
 **Why random forest?** Trees can represent nonlinear patterns. Multiple trees reduce reliance on one tree.
 
-**Why scale only logistic regression?** Its optimization is sensitive to feature magnitude. Tree splits do not need standard scaling. The pipeline fits scaling on training data to avoid leakage.
+**Why scale logistic regression and the neural network?** Both learn weights that are sensitive to feature magnitude. Tree splits do not need standard scaling. Preprocessing is fitted on training data to avoid leakage.
 
 **What is leakage?** Test-set information influencing training or preprocessing, making a test score less trustworthy.
 

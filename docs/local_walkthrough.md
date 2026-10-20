@@ -41,6 +41,6 @@ The dataset labels **malignant = 0** and **benign = 1**. Precision, recall, F1, 
 
 - `python -m pytest -q` passes.
 - `python -m scripts.smoke_test` reports a saved run.
-- The local or public app opens, trains both models, and displays two saved rows.
+- The local or public app opens, trains the two scikit-learn baselines, and displays two saved rows. The PyTorch model, Optuna tuning, drift check, and AI insights are additional demo paths.
 - The README's public URL and embedded GIF open correctly.
 - Each speaker can explain the positive class, split, scaling pipeline, and database limitation.
