@@ -4,6 +4,7 @@ pandas>=2.2,<3
 numpy>=1.26,<3
 pytest>=8,<9
 optuna>=3.6,<5
+openai>=1.66,<4
 # PyTorch's CPU wheel avoids pulling GPU libraries into the Linux demo image.
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.14.1+cpu; sys_platform == "linux"
