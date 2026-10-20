@@ -1,6 +1,7 @@
 """Tests for AI insights. No test calls the real OpenAI API or needs a key."""
 
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -226,12 +227,12 @@ def test_dashboard_labels_ai_text_and_survives_api_failure(tmp_path, monkeypatch
     app.run(timeout=20)
     monkeypatch.setattr(module, "get_api_key", lambda: "sk-test-not-real")
     boom = FakeClient(error=RuntimeError("down"))
-    monkeypatch.setattr("openai.OpenAI", lambda **kwargs: boom)
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=lambda **kwargs: boom))
     next(b for b in app.button if b.label == "Generate AI Insights").click().run(timeout=20)
     assert not app.exception and any("Local summary" in m.value for m in app.markdown)
 
     good = FakeClient("Plain AI words.")
-    monkeypatch.setattr("openai.OpenAI", lambda **kwargs: good)
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=lambda **kwargs: good))
     next(b for b in app.button if b.label == "Generate AI Insights").click().run(timeout=20)
     assert any("AI-generated suggestions" in m.value for m in app.markdown)
     assert any("Plain AI words." in m.value for m in app.markdown)
