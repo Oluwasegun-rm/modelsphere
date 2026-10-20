@@ -1,9 +1,7 @@
 # Deployment guide
 
-1. Push the repository to GitHub.
-2. Create a Streamlit Community Cloud app using `app.py` on the default branch.
-3. Verify the app opens in a private browser window, trains both models, and displays metrics.
-4. Check whether experiment history survives a restart. Streamlit Community Cloud local storage may be ephemeral; document the observed behavior rather than promise persistent shared history.
-5. Put the verified public URL in README.
+The public app is [ModelSphere on Streamlit Community Cloud](https://efpmqnyhgu7aepxpdqxxi2.streamlit.app/). It runs `app.py` from the repository's `main` branch. On October 20, 2026, the public app trained and saved logistic regression, Optuna-tuned logistic regression, and PyTorch neural runs; accepted a small synthetic CSV; detected a simulated drift warning; and returned a real OpenAI Insights response. Random forest and uploaded-batch drift were verified in earlier live checks.
 
-The core app requires no secrets. A writable local directory is needed for SQLite. For a persistent multi-user deployment, move experiment storage to a hosted database; that is outside the initial course demo.
+To update the deployment, merge a tested pull request into `main`, wait for Streamlit Community Cloud to rebuild, then open the public URL and repeat the relevant workflow. GitHub Actions checks tests and a Docker build, smoke run, and app health. It does not automatically deploy the Docker image or run post-deployment model tests.
+
+The core app requires no secret. The optional OpenAI request uses `OPENAI_API_KEY` from Streamlit secrets or an environment variable. Never commit a key. SQLite needs a writable local directory; Community Cloud local history may reset after an app restart. Persistent multi-user history would require hosted storage and is outside this course demo.

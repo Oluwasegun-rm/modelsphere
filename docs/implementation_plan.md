@@ -1,6 +1,6 @@
 # Implementation plan against the course brief
 
-This is the order for the next release. A feature counts as complete only after its PR passes tests, it works in the public app, and README and the walkthrough describe what users can actually do. Keep logistic regression and random forest as understandable baselines.
+This records the submission scope against the course brief. A feature counts as complete only after its PR passes tests, it works in the public app, and README and the walkthrough describe what users can actually do. Logistic regression and random forest remain understandable baselines.
 
 | Professor's instruction | Current status | Next step |
 | --- | --- | --- |
@@ -18,6 +18,6 @@ This is the order for the next release. A feature counts as complete only after 
 3. **Owner integration completed:** PR #13 merged. The public app trained and saved both built-in and uploaded tuned runs and detected both simulated and uploaded batch shifts. Keep the default one-click demo path fast.
 4. **PyTorch/Lightning model completed:** A small CPU binary neural network uses the same split, encoded positive class, metrics, and `Result` shape, with at most 20 epochs. Local tests, Linux container CI, and a public two-epoch training run succeeded.
 5. **Optional LLM insight completed:** Saved runs can receive plain-language commentary from OpenAI using allowlisted aggregate data. The public app returned a real AI response; a local summary is available when the API is unavailable.
-6. **Final presentation:** Refresh the walkthrough GIF if time permits, rehearse the public deployment, and keep all three teammates ready to explain their own contributions and the limitations of each feature.
+6. **Final presentation:** The refreshed walkthrough GIF now includes the CSV, PyTorch, tuning, drift, and AI paths. Rehearse the public deployment, and keep all three teammates ready to explain their own contributions and each feature's limitations.
 
 Do not install `transformers` or `docker-py` just to list them as technologies. Add them only if a tested feature genuinely uses them. The public app must remain available while optional work is integrated.

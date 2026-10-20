@@ -9,7 +9,8 @@ Streamlit controls (app.py)
     | built-in data OR inspected CSV (src/datasets.py)
     | model, settings, test fraction, seed
     v
-train_model (src/training.py) OR tune_model (src/tuning.py)
+train_model (src/training.py), tune_model (src/tuning.py),
+or train_neural_model (src/neural.py)
     | load bundled Wisconsin dataset or accept DatasetSpec
     | stratified train/test split
     | fit preprocessing and model on training rows only
@@ -41,8 +42,10 @@ The UI coordinates the workflow. `src/datasets.py` validates uploads and returns
 | `src/insights.py` | Optional AI commentary: builds a small allowlisted summary of saved runs, calls OpenAI only on request, and falls back to a local summary. |
 | `src/tracking.py` | Creates a SQLite table if needed, inserts run summaries, and lists them newest first. |
 | `src/__init__.py` | Makes `src` importable as a Python package. |
-| `tests/test_training.py` | Checks dataset size, both models, metric ranges, and invalid model handling. |
+| `tests/test_training.py` | Checks dataset size, the two scikit-learn baselines, metric ranges, and invalid model handling. |
 | `tests/test_tracking.py` | Saves two runs in a temporary database and checks order and settings. |
+| `tests/test_dataset_upload.py`, `tests/test_neural.py`, `tests/test_tuning.py` | Check upload validation, neural results, and bounded tuning. |
+| `tests/test_monitoring.py`, `tests/test_insights.py`, `tests/test_dashboard.py` | Check drift reporting, AI request boundaries and fallback, and dashboard integration. |
 | `scripts/smoke_test.py` | Checks the complete train-save-read path without the UI. |
 | `requirements.txt` | Lists packages needed locally and on deployment. |
 | `.github/workflows/test.yml` | Runs pytest on pushes and pull requests. |
@@ -101,11 +104,11 @@ SQLite is a single file on the machine running the app. Cloud storage may disapp
 - **pytest and GitHub Actions:** Check basic behavior locally and after changes.
 - **Docker:** Packages one app instance; CI builds and smoke-checks it. It does not autoscale.
 
-## Current extensions and next contracts
+## Implemented extensions and remaining limits
 
 - **Optuna tuning (WaunCPU):** `src/tuning.py` accepts the same built-in or `DatasetSpec` data and returns a JSON-safe `Result`. It uses cross-validation on training rows only; the held-out test set is scored once after choosing settings. The dashboard keeps this optional so the manual run remains fast.
 - **Drift signal (Eicap1-prog):** `src/monitoring.py` compares numeric features from reference training rows and a new batch. Its output explains the measure and threshold. The dashboard can demonstrate a synthetic shift or accept another CSV. Without labels for the new batch, it cannot measure accuracy degradation or predict future drift.
 - **PyTorch/Lightning classifier (Oluwasegun):** `src/neural.py` returns the same `Result` shape and metrics using the same split, positive-class mapping, and training-only preprocessing. The dashboard offers its bounded CPU training controls. PyTorch hooks could later log internal outputs, but hooks alone do not detect drift.
-- **AI Experiment Insights (Eicap1-prog):** `src/insights.py` takes records from `list_experiments()` and keeps only an allowlist: model type, numeric settings, row counts, the five test metrics, tuning scores, and for uploads only the number of feature columns. It never sends dataset rows, filenames, column names, or class labels, and it sends at most the five newest selected runs. The dashboard calls it only when the user clicks **Generate AI Insights**, and the result is kept in session state so reruns make no new call. The model is configurable with `OPENAI_MODEL`. The key comes from `OPENAI_API_KEY` or Streamlit secrets and is never printed or stored. With no key, no `openai` package, or any API error, the app shows a clearly labelled local summary instead. AI text is shown as suggestions, separate from measured metrics, and never changes any setting. Tests use a fake client; no automated test calls OpenAI.
+- **AI Experiment Insights (Eicap1-prog):** `src/insights.py` takes records from `list_experiments()` and keeps only an allowlist: model type, numeric settings, row counts, the five test metrics, tuning scores, dataset kind, total usable run count, and for uploads only the number of feature columns. It never sends dataset rows, filenames, column names, or class labels, and it sends at most the five newest selected runs. The dashboard calls it only when the user clicks **Generate AI Insights**, and the result is kept in session state so reruns make no new call. The model is configurable with `OPENAI_MODEL`. The key comes from `OPENAI_API_KEY` or Streamlit secrets and is never printed or stored. With no key, no `openai` package, or any API error, the app shows a clearly labelled local summary instead. AI text is shown as suggestions, separate from measured metrics, and never changes any setting. Tests use a fake client; no automated test calls OpenAI.
 
 AI Insights was observed returning a real response in the public deployment on October 20, 2026; automated tests still use a fake client. Dockerfile generation, Swarm/Kubernetes scaling, transformer-based drift prediction, alerts, and a complete automated deployment pipeline are outside the current release. README and presentation claims must match the live app.
