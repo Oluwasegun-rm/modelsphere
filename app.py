@@ -5,6 +5,7 @@ import streamlit as st
 from sklearn.datasets import load_breast_cancer
 
 from src.datasets import BUILTIN_DATASET_ID, prepare_dataset, read_csv
+from src.insights import MAX_EXPERIMENTS, generate_insights
 from src.monitoring import detect_numeric_drift
 from src.neural import MODEL_NAME as NEURAL_MODEL, train_neural_model
 from src.training import dataset_summary, split_indices, train_model
@@ -231,5 +232,44 @@ if ready:
             st.caption(report.limits)
         except (TypeError, ValueError) as exc:
             st.error(f"Drift check could not run: {exc}")
+else:
+    st.write("Choose a valid dataset first.")
+
+st.subheader("AI Experiment Insights")
+st.caption("Optional plain-language commentary on saved runs. Only model settings, row counts and test metrics are sent "
+           "to OpenAI, never your data rows, filenames or column names. It runs only when you click the button.")
+if ready:
+    try:
+        insight_runs = [item for item in list_experiments()
+                        if item["parameters"].get("dataset", {}).get("id", BUILTIN_DATASET_ID) == dataset_id]
+    except OSError as exc:
+        insight_runs = []
+        st.warning(f"Experiment history unavailable: {exc}")
+    if insight_runs:
+        run_ids = [item["id"] for item in insight_runs]
+        picked = st.multiselect(f"Runs to explain (up to {MAX_EXPERIMENTS}; pick two or more to compare)", run_ids,
+                                default=run_ids[:2], max_selections=MAX_EXPERIMENTS,
+                                format_func=lambda run_id: f"Run #{run_id}")
+        if st.button("Generate AI Insights", disabled=not picked):
+            chosen = [item for item in insight_runs if item["id"] in picked]
+            try:
+                with st.spinner("Writing insights..."):
+                    st.session_state["insight_result"] = (tuple(sorted(picked)), generate_insights(chosen))
+            except ValueError as exc:
+                st.session_state.pop("insight_result", None)
+                st.error(f"Insights could not be created: {exc}")
+        saved = st.session_state.get("insight_result")
+        if saved and saved[0] == tuple(sorted(picked)):
+            outcome = saved[1]
+            if outcome.source == "ai":
+                st.markdown("**AI-generated suggestions** (not measured results; check them against the table above):")
+            else:
+                st.markdown("**Local summary** (no AI was used; computed from the saved metrics):")
+                if outcome.note:
+                    st.info(outcome.note)
+            st.write(outcome.text)
+        st.caption("Metrics come from held-out test rows. AI text is an explanation aid, may be wrong, and never changes any setting.")
+    else:
+        st.write("Save at least one experiment for this dataset to get insights.")
 else:
     st.write("Choose a valid dataset first.")
