@@ -6,6 +6,7 @@ from sklearn.datasets import load_breast_cancer
 
 from src.datasets import BUILTIN_DATASET_ID, prepare_dataset, read_csv
 from src.monitoring import detect_numeric_drift
+from src.neural import MODEL_NAME as NEURAL_MODEL, train_neural_model
 from src.training import dataset_summary, split_indices, train_model
 from src.tracking import list_experiments, save_experiment
 from src.tuning import tune_model
@@ -81,22 +82,30 @@ with st.sidebar:
     # These controls become arguments to one shared training function.
     # Keeping the split and seed fixed makes two model runs easier to compare.
     st.header("Configure experiment")
-    model = st.selectbox("Classification model", ["Logistic regression", "Random forest"])
+    model = st.selectbox("Classification model", ["Logistic regression", "Random forest", NEURAL_MODEL])
     test_size = st.slider("Test fraction", 0.1, 0.4, 0.2, 0.05)
     seed = st.number_input("Random seed", 0, 100000, 42, 1)
-    auto_tune = st.checkbox("Tune automatically with Optuna", value=False)
-    if auto_tune:
-        trials = st.slider("Tuning trials", 3, 20, 12)
-        st.caption("Tries settings on training rows only, then scores the test rows once.")
+    if model == NEURAL_MODEL:
+        st.caption("Small CPU neural network trained with PyTorch and Lightning.")
+        epochs = st.slider("Training epochs", 1, 20, 10)
+        hidden_units = st.selectbox("Hidden units", [8, 16, 32], index=1)
+        learning_rate = st.selectbox("Learning rate", [0.0001, 0.001, 0.01], index=1)
+        auto_tune = False
         c, n_estimators, max_depth = 1.0, 100, None
-    elif model == "Logistic regression":
-        c = st.number_input("Regularization C", min_value=0.01, max_value=100.0, value=1.0)
-        n_estimators, max_depth = 100, None
     else:
-        n_estimators = st.slider("Trees", 10, 300, 100, 10)
-        depth = st.slider("Maximum depth (0 = unlimited)", 0, 30, 0)
-        max_depth = None if depth == 0 else depth
-        c = 1.0
+        auto_tune = st.checkbox("Tune automatically with Optuna", value=False)
+        if auto_tune:
+            trials = st.slider("Tuning trials", 3, 20, 12)
+            st.caption("Tries settings on training rows only, then scores the test rows once.")
+            c, n_estimators, max_depth = 1.0, 100, None
+        elif model == "Logistic regression":
+            c = st.number_input("Regularization C", min_value=0.01, max_value=100.0, value=1.0)
+            n_estimators, max_depth = 100, None
+        else:
+            n_estimators = st.slider("Trees", 10, 300, 100, 10)
+            depth = st.slider("Maximum depth (0 = unlimited)", 0, 30, 0)
+            max_depth = None if depth == 0 else depth
+            c = 1.0
     run = st.button("Tune, train and save" if auto_tune else "Train and save",
                     type="primary", disabled=not ready)
 
@@ -104,7 +113,12 @@ if run:
     try:
         # Training returns a small summary of settings and test scores.
         # Tracking saves that summary; it does not save a model or raw dataset rows.
-        if auto_tune:
+        if model == NEURAL_MODEL:
+            with st.spinner("Training the small neural network on CPU…"):
+                result = train_neural_model(test_size=test_size, random_state=int(seed),
+                                            epochs=epochs, hidden_units=hidden_units,
+                                            learning_rate=learning_rate, dataset=dataset)
+        elif auto_tune:
             result = tune_model(model, n_trials=trials, test_size=test_size,
                                 random_state=int(seed), dataset=dataset)
         else:

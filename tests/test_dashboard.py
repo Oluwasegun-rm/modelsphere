@@ -46,3 +46,19 @@ def test_dashboard_shows_a_simulated_drift_warning(tmp_path, monkeypatch):
 
     assert not app.exception
     assert any("Drift warning" in message.value for message in app.warning)
+
+
+def test_dashboard_can_save_a_neural_experiment(tmp_path, monkeypatch):
+    monkeypatch.setenv("MODELSPHERE_DB_PATH", str(tmp_path / "experiments.db"))
+
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(app_path).run(timeout=120)
+    next(box for box in app.selectbox if box.label == "Classification model").set_value(
+        "Neural network (PyTorch)").run(timeout=120)
+    assert not app.exception
+    next(slider for slider in app.slider if slider.label == "Training epochs").set_value(2).run(timeout=120)
+
+    next(button for button in app.button if button.label == "Train and save").click().run(timeout=120)
+    assert not app.exception
+    assert any("Experiment #" in message.value for message in app.success)
+    assert app.dataframe[0].value.iloc[0]["model"] == "Neural network (PyTorch)"

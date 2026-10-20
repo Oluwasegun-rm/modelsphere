@@ -64,12 +64,13 @@ Only training rows are passed to `.fit()`. Uploaded missing numeric values are i
 | --- | --- | --- | --- |
 | Logistic regression | Learns feature weights and converts them to a class probability; it is a classifier despite its name. | `C`, the inverse regularization strength. Smaller `C` means stronger regularization. | A simple linear baseline. |
 | Random forest | Trains many decision trees and combines their votes. | Number of trees and maximum tree depth. | A nonlinear contrast that can capture feature interactions. |
+| Neural network (PyTorch) | Learns a small hidden representation, then a probability for class 1. | Epochs (1–20), hidden units (8/16/32), and learning rate. | Demonstrates the requested PyTorch/Lightning workflow on the same data. |
 
-Logistic regression uses median imputation and `StandardScaler` inside a scikit-learn pipeline because feature scales vary. Random forest uses median imputation without scaling. Preprocessing is fit on **training data only**; the test data is transformed using training-set statistics. This prevents test data leakage. Both models use scikit-learn implementations as course-level baselines.
+Logistic regression uses median imputation and `StandardScaler` inside a scikit-learn pipeline because feature scales vary. Random forest uses median imputation without scaling. The neural network uses the same training-only imputation and scaling, then a PyTorch model with one hidden layer, a binary cross-entropy loss, and a Lightning CPU training loop. Preprocessing is fit on **training data only**; the test data is transformed using training-set statistics. This prevents test data leakage. The neural network is a bounded course demonstration, not a large-scale AI model.
 
 ## Metrics and interpretation
 
-`predict()` gives class labels; `predict_proba()[:, 1]` gives a probability score for encoded class **1**. For the built-in dataset, class 1 is **benign**. For an upload, the user chooses which target value becomes class 1. Precision, recall, F1, and ROC AUC use that positive class. This library convention is not a statement about medical importance.
+The scikit-learn models use `predict()` for labels and `predict_proba()[:, 1]` for the score of encoded class **1**. The neural network applies a sigmoid to its output and labels scores of at least 0.5 as class 1. For the built-in dataset, class 1 is **benign**. For an upload, the user chooses which target value becomes class 1. Precision, recall, F1, and ROC AUC use that positive class. This library convention is not a statement about medical importance.
 
 | Metric | Meaning here |
 | --- | --- |
@@ -93,6 +94,7 @@ SQLite is a single file on the machine running the app. Cloud storage may disapp
 - **Streamlit:** An interactive dashboard without a separate frontend or API server.
 - **scikit-learn:** Established implementations for data loading, splitting, preprocessing, models, and metrics.
 - **Optuna:** Tries a bounded set of hyperparameters using training-only cross-validation. It is not reinforcement learning.
+- **PyTorch and Lightning:** Build and train one small CPU neural classifier; its results use the same held-out evaluation and SQLite tracking as the baselines.
 - **SQLite:** A built-in single-file database sufficient for demo runs.
 - **pandas:** Converts saved run dictionaries to the comparison table.
 - **pytest and GitHub Actions:** Check basic behavior locally and after changes.
@@ -102,7 +104,7 @@ SQLite is a single file on the machine running the app. Cloud storage may disapp
 
 - **Optuna tuning (WaunCPU):** `src/tuning.py` accepts the same built-in or `DatasetSpec` data and returns a JSON-safe `Result`. It uses cross-validation on training rows only; the held-out test set is scored once after choosing settings. The dashboard keeps this optional so the manual run remains fast.
 - **Drift signal (Eicap1-prog):** `src/monitoring.py` compares numeric features from reference training rows and a new batch. Its output explains the measure and threshold. The dashboard can demonstrate a synthetic shift or accept another CSV. Without labels for the new batch, it cannot measure accuracy degradation or predict future drift.
-- **PyTorch/Lightning classifier (Oluwasegun):** A small CPU neural network lives in its own module and returns the same `Result` shape and metrics. Use the same split, positive-class mapping, training-only preprocessing, and bounded run time. Verify cloud installation before enabling it in the live app. PyTorch hooks may later log internal outputs, but hooks alone do not detect drift.
+- **PyTorch/Lightning classifier (Oluwasegun):** `src/neural.py` returns the same `Result` shape and metrics using the same split, positive-class mapping, and training-only preprocessing. The dashboard offers its bounded CPU training controls. PyTorch hooks could later log internal outputs, but hooks alone do not detect drift.
 - **LLM explanation (Oluwasegun):** Optional commentary on saved settings and aggregate metrics only. Keep the secret in deployment settings; send no uploaded rows. Label generated suggestions as interpretations rather than measured results.
 
-PyTorch and LLM commentary remain planned. Dockerfile generation, Swarm/Kubernetes scaling, transformer-based drift prediction, alerts, and a complete automated deployment pipeline are also outside the current release. README and presentation claims must match the live app.
+LLM commentary remains planned. Dockerfile generation, Swarm/Kubernetes scaling, transformer-based drift prediction, alerts, and a complete automated deployment pipeline are also outside the current release. README and presentation claims must match the live app.
