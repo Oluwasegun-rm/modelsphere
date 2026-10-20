@@ -236,8 +236,9 @@ else:
     st.write("Choose a valid dataset first.")
 
 st.subheader("AI Experiment Insights")
-st.caption("Optional plain-language commentary on saved runs. Only model settings, row counts and test metrics are sent "
-           "to OpenAI, never your data rows, filenames or column names. It runs only when you click the button.")
+st.caption("Optional plain-language commentary on saved runs. Model settings, row counts, test metrics, "
+           "tuning results, dataset kind, and feature counts are sent to OpenAI, never your data rows, filenames or column "
+           "names. It runs only when you click the button.")
 if ready:
     try:
         insight_runs = [item for item in list_experiments()

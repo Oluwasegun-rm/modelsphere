@@ -18,7 +18,7 @@ The initial scaffold was created with Codex; it is not represented as a student'
 
 * **Application URL:** [ModelSphere on Streamlit Community Cloud](https://efpmqnyhgu7aepxpdqxxi2.streamlit.app/)
 
-The public app was opened and both classifiers were trained successfully on October 19, 2026. Local SQLite history on Community Cloud may reset after an app restart.
+The public app was checked on October 20, 2026: logistic regression and the PyTorch neural network trained and saved runs, and the configured OpenAI Insights button returned an AI response. Random forest, CSV upload, Optuna tuning, and drift checks were verified in earlier live checks. Local SQLite history on Community Cloud may reset after an app restart.
 
 ### 🎥 Project Walkthrough
 
@@ -73,7 +73,7 @@ This is an educational dataset and app, not a clinical diagnostic tool.
 
 The **Check data drift** section compares training features with a new batch, either an uploaded CSV or a clearly labelled built-in example. It reports a per-feature distribution gap and a plain-language status. This is an input-data warning, not a prediction of future drift or a measurement of model accuracy. At least 30 usable values per feature are needed in each batch. The check does not send alerts or save monitoring history. Predictive alerts and dynamic container scaling are not implemented in this release.
 
-The **AI Experiment Insights** section (`src/insights.py`) is optional. After you pick saved runs and click **Generate AI Insights**, it asks an OpenAI model to explain them in plain language and suggest things to try. Only model settings, row counts, and aggregate test metrics are sent, for at most the five newest selected runs. Dataset rows, filenames, and column names are never sent. The text is labelled as AI-generated suggestions, separate from the measured results, and it cannot change any setting. Nothing is called until the button is clicked. Without an API key, without the `openai` package, or if the API fails, the app shows a clearly labelled local summary instead and keeps working. To enable it, set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) as an environment variable locally or in Streamlit secrets when deployed; never commit the key. Automated tests use a fake client, and the live OpenAI response in the public deployment has not yet been confirmed.
+The **AI Experiment Insights** section (`src/insights.py`) is optional. After you pick saved runs and click **Generate AI Insights**, it asks an OpenAI model to explain them in plain language and suggest things to try. The allowlisted request contains model settings, row counts, aggregate test metrics, tuning results, dataset kind, and feature counts for at most the five newest selected runs. Dataset rows, filenames, and column names are never sent. The text is labelled as AI-generated suggestions, separate from the measured results, and it cannot change any setting. Nothing is called until the button is clicked. Without an API key, without the `openai` package, or if the API fails, the app shows a clearly labelled local summary instead and keeps working. To enable it, set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) as an environment variable locally or in Streamlit secrets when deployed; never commit the key. Automated tests use a fake client; a real AI response was also observed in the public app on October 20, 2026.
 
 ---
 

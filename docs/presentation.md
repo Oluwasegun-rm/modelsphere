@@ -24,9 +24,10 @@ Adjust speaking assignments to the code and commits each person actually contrib
 4. Select random forest, 100 trees, unlimited depth. Keep split and seed fixed. Click **Train and save**.
 5. Scroll to the comparison table and point to settings and metrics for both runs.
 6. Turn on **Tune automatically with Optuna** and run a small search. Explain that its validation score is from training folds and the metric cards are from held-out test rows.
-7. Under **Check data drift**, select **Simulated shift** and click **Check drift**. Show the flagged features and explain that this is an artificial input change, not measured accuracy loss.
-8. Optional, only if an OpenAI key is configured: under **AI Experiment Insights**, select two runs and click **Generate AI Insights**. Point out the label that separates AI suggestions from measured results. Without a key the same button shows a local summary.
-9. If the public app is slow, show `docs/demo.gif` and switch to the verified local app.
+7. If time allows, choose **Neural network (PyTorch)** with two epochs and train it. Explain that this small Lightning model uses the same dataset split and test metrics as the baselines.
+8. Under **Check data drift**, select **Simulated shift** and click **Check drift**. Show the flagged features and explain that this is an artificial input change, not measured accuracy loss.
+9. Under **AI Experiment Insights**, select two runs and click **Generate AI Insights**. The public app returned a real AI response in the October 20 check. Point out the label that separates suggestions from measured results. If the API is unavailable, the same button shows a local summary.
+10. If the public app is slow, show `docs/demo.gif` and switch to the verified local app.
 
 ## Likely questions and short answers
 
@@ -46,7 +47,7 @@ Adjust speaking assignments to the code and commits each person actually contrib
 
 **Does the app tune models or monitor drift?** It offers bounded Optuna tuning and a simple numeric input-drift signal. Optuna is not reinforcement learning. The drift signal does not predict future changes or measure accuracy without labels for the new batch.
 
-**Does the AI see my data?** No. Only model settings, row counts, and test metrics are sent, and only after the button is clicked. Dataset rows, filenames and column names are never sent. Its text is a suggestion that can be wrong, and it cannot change any setting.
+**Does the AI see my data?** It sees an allowlisted summary: model settings, row counts, test metrics, tuning results, dataset kind, and feature counts, only after the button is clicked. Dataset rows, filenames, and column names are never sent. Its text is a suggestion that can be wrong, and it cannot change any setting.
 
 **What if there is no API key or OpenAI is down?** The app keeps working and shows a local summary computed from the saved metrics.
 
